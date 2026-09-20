@@ -11,9 +11,12 @@ import {
 import { formatPace } from '../src/utils/format.js';
 import { buildDemoRoute, getDemoFrame } from '../src/domain/demo.js';
 import {
+  getGpsPointDecision,
+  getGpsStepThresholdMeters,
   getGpsErrorMessage,
   haversineKm,
   isUsableGpsPoint,
+  projectGpsRoute,
   shouldAppendRoutePoint,
 } from '../src/domain/gps.js';
 
@@ -122,23 +125,59 @@ test('demo route carries fixed map-road coordinates and closes the road loop', (
 
 test('GPS points require usable accuracy before entering the route', () => {
   assert.equal(isUsableGpsPoint({ lat: 30, lng: 120, accuracy: 20 }), true);
+  assert.equal(isUsableGpsPoint({ lat: 30, lng: 120, accuracy: 40 }), true);
+  assert.equal(isUsableGpsPoint({ lat: 30, lng: 120, accuracy: 41 }), false);
   assert.equal(isUsableGpsPoint({ lat: 30, lng: 120, accuracy: 120 }), false);
   assert.equal(isUsableGpsPoint({ lat: 30, lng: 120 }), false);
 });
 
-test('GPS route waits for roughly five metres of movement', () => {
+test('GPS route uses an accuracy-aware movement threshold', () => {
   const start = { lat: 30, lng: 120 };
   const near = { lat: 30.00001, lng: 120 };
-  const far = { lat: 30.00006, lng: 120 };
+  const far = { lat: 30.00010, lng: 120 };
 
-  assert.ok(haversineKm(start, near) < 0.005);
-  assert.ok(haversineKm(start, far) > 0.005);
+  assert.ok(haversineKm(start, near) < 0.008);
+  assert.ok(haversineKm(start, far) > 0.008);
   assert.equal(shouldAppendRoutePoint(start, near), false);
   assert.equal(shouldAppendRoutePoint(start, far), true);
+
+  const uncertainStart = { ...start, accuracy: 30 };
+  const uncertainNear = { lat: 30.00018, lng: 120, accuracy: 30 };
+  const uncertainFar = { lat: 30.00030, lng: 120, accuracy: 30 };
+  assert.equal(getGpsStepThresholdMeters(uncertainStart, uncertainNear), 22.5);
+  assert.equal(shouldAppendRoutePoint(uncertainStart, uncertainNear), false);
+  assert.equal(shouldAppendRoutePoint(uncertainStart, uncertainFar), true);
+});
+
+test('GPS route rejects implausible one-second jumps', () => {
+  const start = { lat: 30, lng: 120, accuracy: 10, timestamp: 1000 };
+  const jump = { lat: 30.001, lng: 120, accuracy: 10, timestamp: 2000 };
+  const decision = getGpsPointDecision(start, jump);
+
+  assert.equal(decision.accepted, false);
+  assert.equal(decision.reason, 'implausible-speed');
+});
+
+test('GPS projection keeps metres proportional and does not stretch a 90 metre route', () => {
+  const latitude = 30;
+  const start = { lat: latitude, lng: 120 };
+  const east90 = {
+    lat: latitude,
+    lng: 120 + 90 / (111320 * Math.cos(latitude * Math.PI / 180)),
+  };
+  const north90 = { lat: latitude + 90 / 111320, lng: 120 };
+  const projected = projectGpsRoute([start, east90, north90]);
+  const eastPixels = Math.abs(projected.points[1].x - projected.points[0].x);
+  const northPixels = Math.abs(projected.points[2].y - projected.points[0].y);
+
+  assert.ok(eastPixels > 100 && eastPixels < 120);
+  assert.ok(Math.abs(eastPixels - northPixels) < 1);
+  assert.equal(projected.scaleDistanceMeters, 50);
+  assert.ok(projected.scaleWidthPixels >= 50 && projected.scaleWidthPixels <= 70);
 });
 
 test('GPS errors give users an actionable recovery path', () => {
-  assert.match(getGpsErrorMessage({ code: 1 }), /允许定位/);
+  assert.match(getGpsErrorMessage({ code: 1 }), /系统浏览器/);
   assert.match(getGpsErrorMessage({ code: 2 }), /定位服务/);
   assert.match(getGpsErrorMessage({ code: 3 }), /超时/);
 });

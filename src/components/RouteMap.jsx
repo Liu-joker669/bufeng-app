@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { projectGpsRoute } from '../domain/gps.js';
 
 function projectRoute(route, referenceRoute = route) {
   if (!route || route.length === 0) return null;
@@ -21,31 +22,20 @@ function projectRoute(route, referenceRoute = route) {
     };
   }
 
-  const lats = boundsRoute.map(point => point.lat);
-  const lngs = boundsRoute.map(point => point.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const latPadding = Math.max((maxLat - minLat) * 0.16, 0.0002);
-  const lngPadding = Math.max((maxLng - minLng) * 0.16, 0.0002);
-  const scaleX = maxLng - minLng + lngPadding * 2 || 0.001;
-  const scaleY = maxLat - minLat + latPadding * 2 || 0.001;
-
-  const project = point => ({
-    x: ((point.lng - minLng + lngPadding) / scaleX) * 380 + 10,
-    y: 210 - ((point.lat - minLat + latPadding) / scaleY) * 190 - 10,
-  });
-
-  const projectedPoints = route.map(point => {
-      const projected = project(point);
-      return { ...point, ...projected };
+  const referenceProjection = projectGpsRoute(boundsRoute);
+  const projectedRoute = boundsRoute === route
+    ? referenceProjection
+    : projectGpsRoute(route, {
+      minimumViewportWidthMeters: Math.max(300, 360 / referenceProjection.pixelsPerMeter),
     });
+  const projectedPoints = projectedRoute.points;
 
   return {
     segments: splitProjectedSegments(projectedPoints),
-    start: project(route[0]),
-    end: project(route[route.length - 1]),
+    start: projectedRoute.start,
+    end: projectedRoute.end,
+    scaleDistanceMeters: projectedRoute.scaleDistanceMeters,
+    scaleWidthPixels: projectedRoute.scaleWidthPixels,
   };
 }
 
@@ -66,6 +56,83 @@ const buildingBlocks = [
 
 const trees = [[40, 42], [59, 31], [77, 47], [95, 35], [31, 60], [102, 59], [161, 145], [181, 137], [203, 143], [228, 127], [247, 118]];
 
+function DemoMapBackdrop() {
+  return (
+    <>
+      <rect width="400" height="220" fill="#f1f6ef" />
+      <path d="M337 -15 C308 31 351 69 325 111 C305 143 334 184 302 235 L425 235 L425 -15 Z" fill="#d9ecff" />
+      <path d="M347 -10 C323 32 360 70 338 112 C322 146 347 185 320 229" fill="none" stroke="#b8d9f5" strokeWidth="2" strokeDasharray="5 5" />
+      <path d="M-8 154 C55 131 106 150 145 129 C183 107 220 118 259 91" fill="none" stroke="#c7e8c7" strokeWidth="46" opacity="0.9" />
+      <ellipse cx="74" cy="49" rx="59" ry="34" fill="#d6efd0" />
+      <rect x="275" y="25" width="42" height="25" rx="7" fill="#dbeafe" stroke="#93c5fd" strokeWidth="1.5" />
+      <path d="M281 37 H311 M296 29 V47" stroke="#93c5fd" strokeWidth="1" opacity="0.8" />
+
+      <g fill="none" stroke="#ffffff" strokeWidth="5" strokeLinecap="round" opacity="0.95">
+        <path d="M8 18 C61 25 97 16 144 24" />
+        <path d="M147 48 C198 54 242 47 291 54" />
+        <path d="M8 126 C64 117 108 127 145 115" />
+        <path d="M146 153 C207 145 255 155 302 136" />
+        <path d="M21 207 C78 192 113 203 162 190" />
+        <path d="M329 57 C356 62 375 55 405 60" />
+        <path d="M34 76 C29 96 31 115 23 137" />
+        <path d="M189 -8 C181 36 193 69 184 104" />
+        <path d="M235 86 C228 115 240 141 231 174" />
+        <path d="M353 132 C348 158 357 182 347 216" />
+      </g>
+
+      <g fill="none" strokeLinecap="round">
+        <path d="M-20 74 C72 87 122 64 190 77 C262 92 322 69 422 78" stroke="#d3d0cc" strokeWidth="16" />
+        <path d="M-20 74 C72 87 122 64 190 77 C262 92 322 69 422 78" stroke="white" strokeWidth="11" />
+        <path d="M-20 74 C72 87 122 64 190 77 C262 92 322 69 422 78" stroke="#e7e5e4" strokeWidth="1" strokeDasharray="10 7" />
+        <path d="M118 -20 C104 45 132 92 119 142 C111 174 119 204 144 240" stroke="#d3d0cc" strokeWidth="15" />
+        <path d="M118 -20 C104 45 132 92 119 142 C111 174 119 204 144 240" stroke="white" strokeWidth="10" />
+        <path d="M274 -20 C255 35 277 95 267 142 C259 176 268 208 286 240" stroke="#d9d6d2" strokeWidth="11" />
+        <path d="M274 -20 C255 35 277 95 267 142 C259 176 268 208 286 240" stroke="white" strokeWidth="7" />
+        <path d="M4 184 C86 166 145 184 206 167 C270 149 327 168 410 150" stroke="#d9d6d2" strokeWidth="11" />
+        <path d="M4 184 C86 166 145 184 206 167 C270 149 327 168 410 150" stroke="white" strokeWidth="7" />
+      </g>
+
+      <g fill="#ffffff" stroke="#dedbd7" strokeWidth="1">
+        {buildingBlocks.map(([x, y, width, height], index) => (
+          <rect key={index} x={x} y={y} width={width} height={height} rx="5" />
+        ))}
+      </g>
+
+      <g fill="#6fbd73" stroke="#ffffff" strokeWidth="1">
+        {trees.map(([x, y], index) => <circle key={index} cx={x} cy={y} r="4" />)}
+      </g>
+
+      <g fill="#627064" fontSize="8.5" fontWeight="600">
+        <text x="45" y="52">社区公园</text>
+        <text x="157" y="69">晨光路</text>
+        <text x="279" y="20">社区球场</text>
+        <text x="309" y="146">滨水步道</text>
+        <text x="24" y="176">绿荫支路</text>
+        <text x="210" y="162">跑走绿道</text>
+      </g>
+
+      <g fontSize="11">
+        <text x="88" y="44">☕</text>
+        <text x="287" y="43">⚽</text>
+        <text x="319" y="124">💧</text>
+        <text x="196" y="196">🚻</text>
+      </g>
+    </>
+  );
+}
+
+function GpsTrackBackdrop({ gridId }) {
+  return (
+    <>
+      <rect width="400" height="220" fill="#f8fafc" />
+      <rect width="400" height="220" fill={`url(#${gridId})`} />
+      <circle cx="200" cy="110" r="72" fill="none" stroke="#dbeafe" strokeWidth="1" strokeDasharray="4 6" />
+      <line x1="200" y1="18" x2="200" y2="202" stroke="#e2e8f0" strokeWidth="1" />
+      <line x1="20" y1="110" x2="380" y2="110" stroke="#e2e8f0" strokeWidth="1" />
+    </>
+  );
+}
+
 export default function RouteMap({
   route,
   referenceRoute = null,
@@ -79,6 +146,7 @@ export default function RouteMap({
   const safeId = rawId.replace(/:/g, '');
   const gradientId = `route-${safeId}`;
   const clipId = `map-clip-${safeId}`;
+  const gridId = `grid-${safeId}`;
   const [zoom, setZoom] = useState(1);
   const [showMarkerInfo, setShowMarkerInfo] = useState(false);
   const projected = projectRoute(route, referenceRoute || route);
@@ -111,7 +179,7 @@ export default function RouteMap({
       <svg
         viewBox="0 0 400 220"
         role="img"
-        aria-label={isDemo ? 'Demo 路线示意图，非真实地图' : '跑走路线轨迹示意图'}
+        aria-label={isDemo ? 'Demo 路线示意图，非真实地图' : 'GPS 相对轨迹图，非真实地图'}
         onClick={() => setShowMarkerInfo(false)}
         style={{ width: '100%', height: compact ? 200 : 228, display: 'block' }}
       >
@@ -121,6 +189,9 @@ export default function RouteMap({
             <stop offset="0%" stopColor="#f59e0b" />
             <stop offset="100%" stopColor="#ef4444" />
           </linearGradient>
+          <pattern id={gridId} width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" strokeWidth="0.75" />
+          </pattern>
         </defs>
 
         <g clipPath={`url(#${clipId})`} style={{
@@ -128,65 +199,7 @@ export default function RouteMap({
           transform: `scale(${zoom})`,
           transition: 'transform 240ms ease, transform-origin 240ms linear',
         }}>
-          <rect width="400" height="220" fill="#f1f6ef" />
-
-          <path d="M337 -15 C308 31 351 69 325 111 C305 143 334 184 302 235 L425 235 L425 -15 Z" fill="#d9ecff" />
-          <path d="M347 -10 C323 32 360 70 338 112 C322 146 347 185 320 229" fill="none" stroke="#b8d9f5" strokeWidth="2" strokeDasharray="5 5" />
-          <path d="M-8 154 C55 131 106 150 145 129 C183 107 220 118 259 91" fill="none" stroke="#c7e8c7" strokeWidth="46" opacity="0.9" />
-          <ellipse cx="74" cy="49" rx="59" ry="34" fill="#d6efd0" />
-          <rect x="275" y="25" width="42" height="25" rx="7" fill="#dbeafe" stroke="#93c5fd" strokeWidth="1.5" />
-          <path d="M281 37 H311 M296 29 V47" stroke="#93c5fd" strokeWidth="1" opacity="0.8" />
-
-          <g fill="none" stroke="#ffffff" strokeWidth="5" strokeLinecap="round" opacity="0.95">
-            <path d="M8 18 C61 25 97 16 144 24" />
-            <path d="M147 48 C198 54 242 47 291 54" />
-            <path d="M8 126 C64 117 108 127 145 115" />
-            <path d="M146 153 C207 145 255 155 302 136" />
-            <path d="M21 207 C78 192 113 203 162 190" />
-            <path d="M329 57 C356 62 375 55 405 60" />
-            <path d="M34 76 C29 96 31 115 23 137" />
-            <path d="M189 -8 C181 36 193 69 184 104" />
-            <path d="M235 86 C228 115 240 141 231 174" />
-            <path d="M353 132 C348 158 357 182 347 216" />
-          </g>
-
-          <g fill="none" strokeLinecap="round">
-            <path d="M-20 74 C72 87 122 64 190 77 C262 92 322 69 422 78" stroke="#d3d0cc" strokeWidth="16" />
-            <path d="M-20 74 C72 87 122 64 190 77 C262 92 322 69 422 78" stroke="white" strokeWidth="11" />
-            <path d="M-20 74 C72 87 122 64 190 77 C262 92 322 69 422 78" stroke="#e7e5e4" strokeWidth="1" strokeDasharray="10 7" />
-            <path d="M118 -20 C104 45 132 92 119 142 C111 174 119 204 144 240" stroke="#d3d0cc" strokeWidth="15" />
-            <path d="M118 -20 C104 45 132 92 119 142 C111 174 119 204 144 240" stroke="white" strokeWidth="10" />
-            <path d="M274 -20 C255 35 277 95 267 142 C259 176 268 208 286 240" stroke="#d9d6d2" strokeWidth="11" />
-            <path d="M274 -20 C255 35 277 95 267 142 C259 176 268 208 286 240" stroke="white" strokeWidth="7" />
-            <path d="M4 184 C86 166 145 184 206 167 C270 149 327 168 410 150" stroke="#d9d6d2" strokeWidth="11" />
-            <path d="M4 184 C86 166 145 184 206 167 C270 149 327 168 410 150" stroke="white" strokeWidth="7" />
-          </g>
-
-          <g fill="#ffffff" stroke="#dedbd7" strokeWidth="1">
-            {buildingBlocks.map(([x, y, width, height], index) => (
-              <rect key={index} x={x} y={y} width={width} height={height} rx="5" />
-            ))}
-          </g>
-
-          <g fill="#6fbd73" stroke="#ffffff" strokeWidth="1">
-            {trees.map(([x, y], index) => <circle key={index} cx={x} cy={y} r="4" />)}
-          </g>
-
-          <g fill="#627064" fontSize="8.5" fontWeight="600">
-            <text x="45" y="52">社区公园</text>
-            <text x="157" y="69">晨光路</text>
-            <text x="279" y="20">社区球场</text>
-            <text x="309" y="146">滨水步道</text>
-            <text x="24" y="176">绿荫支路</text>
-            <text x="210" y="162">跑走绿道</text>
-          </g>
-
-          <g fontSize="11">
-            <text x="88" y="44">☕</text>
-            <text x="287" y="43">⚽</text>
-            <text x="319" y="124">💧</text>
-            <text x="196" y="196">🚻</text>
-          </g>
+          {isDemo ? <DemoMapBackdrop /> : <GpsTrackBackdrop gridId={gridId} />}
 
           {plannedRoute ? (
             plannedRoute.segments.map((points, index) => (
@@ -256,20 +269,29 @@ export default function RouteMap({
         fontSize: 11, fontWeight: 700, color: isDemo ? '#6d28d9' : '#57534e',
         boxShadow: '0 3px 10px rgba(87,83,78,0.08)',
       }}>
-        {isDemo ? 'Demo 示意 · 非真实地图' : '路线轨迹示意'}
+        {isDemo ? 'Demo 示意 · 非真实地图' : 'GPS 相对轨迹 · 非真实地图'}
       </div>
 
-      <div style={{ position: 'absolute', top: 46, right: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <button type="button" className="map-control" aria-label="放大地图" onClick={() => changeZoom(0.15)} disabled={zoom >= 1.45}>＋</button>
-        <button type="button" className="map-control" aria-label="缩小地图" onClick={() => changeZoom(-0.15)} disabled={zoom <= 1}>−</button>
-      </div>
+      {isDemo ? (
+        <div style={{ position: 'absolute', top: 46, right: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <button type="button" className="map-control" aria-label="放大地图" onClick={() => changeZoom(0.15)} disabled={zoom >= 1.45}>＋</button>
+          <button type="button" className="map-control" aria-label="缩小地图" onClick={() => changeZoom(-0.15)} disabled={zoom <= 1}>−</button>
+        </div>
+      ) : null}
 
-      <div style={{
-        position: 'absolute', right: 10, bottom: 10, padding: '4px 7px', borderRadius: 6,
-        background: 'rgba(255,255,255,0.92)', color: '#78716c', fontSize: 9, fontWeight: 600,
-      }}>
-        ├── 200 m
-      </div>
+      {!isDemo && hasRoute && projected?.scaleDistanceMeters ? (
+        <div style={{
+          position: 'absolute', right: 10, bottom: 10, padding: '5px 7px', borderRadius: 6,
+          background: 'rgba(255,255,255,0.94)', color: '#475569', fontSize: 9, fontWeight: 700,
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2,
+        }}>
+          <span style={{
+            display: 'block', width: projected.scaleWidthPixels, maxWidth: 110,
+            borderTop: '2px solid #475569', borderLeft: '1px solid #475569', borderRight: '1px solid #475569',
+          }} />
+          <span>{projected.scaleDistanceMeters} m</span>
+        </div>
+      ) : null}
 
       {showMarkerInfo && markerLabel ? (
         <button type="button" className="route-runner-info" onClick={event => event.stopPropagation()} aria-label="跑者当前状态">

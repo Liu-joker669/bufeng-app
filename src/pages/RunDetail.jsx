@@ -84,7 +84,7 @@ export default function RunDetail() {
             padding: 16,
           }}>
             <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text)', marginBottom: 12 }}>
-              🗺 {run.isDemo ? 'Demo 路线示意' : '跑步路线'}
+              🗺 {run.isDemo ? 'Demo 路线示意' : 'GPS 相对轨迹（非真实地图）'}
             </h3>
             <RouteMap route={run.route} isDemo={run.isDemo} />
             <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginTop: 12, fontSize: 12, color: 'var(--color-text-secondary)' }}>

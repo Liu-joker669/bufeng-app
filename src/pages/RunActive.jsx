@@ -28,6 +28,8 @@ export default function RunActive() {
   const [route, setRoute] = useState([]);
   const [currentPos, setCurrentPos] = useState(null);
   const [error, setError] = useState(null);
+  const [gpsErrorCode, setGpsErrorCode] = useState(null);
+  const [copyStatus, setCopyStatus] = useState('');
   const [completedRun, setCompletedRun] = useState(null);
   const [mode, setMode] = useState(null); // gps | demo
   const [gpsStatus, setGpsStatus] = useState('idle'); // idle | locating | weak | located | tracking
@@ -150,6 +152,7 @@ export default function RunActive() {
       },
       (err) => {
         setError(getGpsErrorMessage(err));
+        setGpsErrorCode(err?.code || 'unknown');
         setGpsStatus('idle');
         stopTracking();
         setPhase('ready');
@@ -161,6 +164,8 @@ export default function RunActive() {
 
   const startRun = useCallback(() => {
     setError(null);
+    setGpsErrorCode(null);
+    setCopyStatus('');
     setPhase('running');
     isDemoRef.current = false;
     setMode('gps');
@@ -207,6 +212,8 @@ export default function RunActive() {
 
   function startDemo() {
     setError(null);
+    setGpsErrorCode(null);
+    setCopyStatus('');
     setPhase('running');
     isDemoRef.current = true;
     setMode('demo');
@@ -296,6 +303,16 @@ export default function RunActive() {
     dispatch({ type: 'SAVE_RUN', payload: run });
   };
 
+  async function copyExperienceLink() {
+    const experienceUrl = new URL(import.meta.env.BASE_URL, window.location.origin).href;
+    try {
+      await navigator.clipboard.writeText(experienceUrl);
+      setCopyStatus('链接已复制，请粘贴到 Chrome 等系统浏览器中打开。');
+    } catch {
+      setCopyStatus(`请手动复制：${experienceUrl}`);
+    }
+  }
+
   // 卸载时清理
   useEffect(() => {
     return () => {
@@ -361,8 +378,8 @@ export default function RunActive() {
         position: 'absolute', inset: 0,
         background: 'linear-gradient(180deg, #fff7ed 0%, #fff 62%, #fef2f2 100%)',
         color: 'var(--color-text)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: 40, zIndex: 200,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
+        padding: '88px 32px 40px', zIndex: 200, overflowY: 'auto',
       }}>
         <button
           onClick={() => navigate('/')}
@@ -382,10 +399,27 @@ export default function RunActive() {
 
         {error && (
           <div style={{
-            background: 'rgba(239,68,68,0.2)', borderRadius: 12, padding: '12px 16px',
-            marginBottom: 16, fontSize: 13, color: '#fca5a5', maxWidth: 300,
+            background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 14px',
+            marginBottom: 16, fontSize: 13, lineHeight: 1.6, color: '#991b1b', width: '100%', maxWidth: 320,
           }}>
-            {error}
+            <div>{error}</div>
+            {gpsErrorCode === 1 ? (
+              <>
+                <ol style={{ margin: '8px 0 10px', paddingLeft: 20 }}>
+                  <li>复制链接并用 Chrome 等系统浏览器打开</li>
+                  <li>允许浏览器应用使用精确位置</li>
+                  <li>在地址栏的网站权限中允许定位</li>
+                </ol>
+                <button type="button" onClick={copyExperienceLink} style={{
+                  border: '1px solid #fca5a5', background: 'white', color: '#991b1b',
+                  borderRadius: 999, padding: '8px 12px', fontSize: 12, fontWeight: 700,
+                  cursor: 'pointer',
+                }}>
+                  复制体验链接
+                </button>
+                {copyStatus ? <div style={{ marginTop: 8, fontSize: 12 }}>{copyStatus}</div> : null}
+              </>
+            ) : null}
           </div>
         )}
 
@@ -399,7 +433,7 @@ export default function RunActive() {
             marginBottom: 16,
           }}
         >
-          开始真实记录
+          {gpsErrorCode === 1 ? '重新检测定位' : '开始真实记录'}
         </button>
 
         <button
@@ -412,6 +446,17 @@ export default function RunActive() {
         >
           或使用模拟跑步 (Demo)
         </button>
+
+        <details style={{
+          width: '100%', maxWidth: 320, marginTop: 14, padding: '10px 12px',
+          borderRadius: 12, border: '1px solid var(--color-border)', background: 'rgba(255,255,255,0.86)',
+          color: 'var(--color-text-secondary)', fontSize: 12, lineHeight: 1.6,
+        }}>
+          <summary style={{ color: 'var(--color-text)', fontWeight: 700, cursor: 'pointer' }}>定位权限打不开？</summary>
+          <div style={{ marginTop: 8 }}>
+            应用内置浏览器可能没有权限入口。请用系统浏览器打开，并在“手机设置 → 应用 → 浏览器 → 权限 → 位置信息”中开启精确位置。
+          </div>
+        </details>
       </div>
     );
   }
@@ -473,7 +518,7 @@ export default function RunActive() {
               : '正在获取 GPS 定位…'
             : '正在生成路线…'}
           singlePointMessage={mode === 'gps'
-            ? `定位成功${gpsAccuracy ? `（精度约 ${gpsAccuracy} 米）` : ''}，移动约 5 米后绘制轨迹`
+            ? `定位成功${gpsAccuracy ? `（精度约 ${gpsAccuracy} 米）` : ''}，继续移动后绘制相对轨迹`
             : null}
         />
         <div style={{

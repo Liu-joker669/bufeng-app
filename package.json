@@ -1,7 +1,7 @@
 {
   "name": "bufeng-app",
   "private": true,
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "面向低频新手跑者的每周计划与跑走记录 Web Demo",
   "license": "MIT",
   "keywords": ["running", "product-demo", "react", "vite", "gps"],
