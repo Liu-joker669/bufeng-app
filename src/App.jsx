@@ -62,8 +62,10 @@ function AppShell() {
 }
 
 export default function App() {
+  const routerBase = import.meta.env.BASE_URL === '/' ? undefined : import.meta.env.BASE_URL;
+
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={routerBase}>
       <AppProvider>
         <AppShell />
       </AppProvider>
