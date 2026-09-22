@@ -10,7 +10,8 @@ import {
   normalizeGoal,
 } from './domain/runs.js';
 
-const LS_KEY = 'bufeng_data';
+const LS_KEY = 'bupin_data';
+const LEGACY_LS_KEY = 'bufeng_data';
 
 function createInitialState() {
   return {
@@ -42,7 +43,7 @@ function sanitizeBadges(savedBadges, user) {
 function loadState() {
   const initialState = createInitialState();
   try {
-    const raw = localStorage.getItem(LS_KEY);
+    const raw = localStorage.getItem(LS_KEY) ?? localStorage.getItem(LEGACY_LS_KEY);
     if (!raw) return initialState;
 
     const saved = JSON.parse(raw);

@@ -1,12 +1,10 @@
-# 步频（Bufeng）
+# 步频（Bupin）
 
 面向“尝试过跑步但当前低频”的新手跑者的交互 Demo。产品用“至少 10 分钟的真实跑走 + 按周目标”替代每日连续打卡，帮助用户建立允许恢复、可以持续的运动节奏。
 
 > 当前阶段：可交互 Web Demo。核心规则与生产构建已验证，真实用户研究和 14 日行为验证尚未完成。
 
-**在线体验（推荐）：** [https://liu-joker669.github.io/bufeng-app/](https://liu-joker669.github.io/bufeng-app/)
-
-**备用体验：** [https://bufeng-app.vercel.app](https://bufeng-app.vercel.app)
+**在线体验：** [https://liu-joker669.github.io/bupin-app/](https://liu-joker669.github.io/bupin-app/)
 
 建议先使用“模拟跑步（Demo）”体验完整闭环。真实 GPS 记录需要在支持定位的手机浏览器中授权位置权限，并尽量在室外使用。
 

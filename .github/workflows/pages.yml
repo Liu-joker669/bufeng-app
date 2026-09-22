@@ -34,7 +34,7 @@ jobs:
         run: npm ci
 
       - name: Build for GitHub Pages
-        run: npm run build -- --base=/bufeng-app/
+        run: npm run build -- --base=/bupin-app/
 
       - name: Add SPA fallback
         run: cp dist/index.html dist/404.html

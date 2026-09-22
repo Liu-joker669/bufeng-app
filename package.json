@@ -1,17 +1,17 @@
 {
-  "name": "bufeng-app",
+  "name": "bupin-app",
   "private": true,
   "version": "1.4.0",
   "description": "面向低频新手跑者的每周计划与跑走记录 Web Demo",
   "license": "MIT",
   "keywords": ["running", "product-demo", "react", "vite", "gps"],
-  "homepage": "https://bufeng-app.vercel.app",
+  "homepage": "https://liu-joker669.github.io/bupin-app/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Liu-joker669/bufeng-app.git"
+    "url": "https://github.com/Liu-joker669/bupin-app.git"
   },
   "bugs": {
-    "url": "https://github.com/Liu-joker669/bufeng-app/issues"
+    "url": "https://github.com/Liu-joker669/bupin-app/issues"
   },
   "type": "module",
   "scripts": {
